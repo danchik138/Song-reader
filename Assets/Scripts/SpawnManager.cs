@@ -19,19 +19,19 @@ public class SpawnManager : MonoBehaviour
     {
         get { return Time.realtimeSinceStartup - startTime; }
     }
-    public void StartSong(Song song)
+    public void StartSong(AudioClip audio, Queue<HitObject> hitsQueue)
     {
-        audioSource.clip = song.audio;
+        audioSource.clip = audio;
         audioSource.Play();
         startTime = Time.realtimeSinceStartup;
-        StartCoroutine(SpawnCircles(song));
+        StartCoroutine(SpawnCircles(hitsQueue));
     }
 
-    IEnumerator SpawnCircles(Song song)
+    IEnumerator SpawnCircles(Queue<HitObject> song)
     {
-        while (song.IfContainsHitObjects)
+        while (song.Count > 0)
         {
-            HitObject hitObject = song.GetHitObjectFromQueue();
+            HitObject hitObject = song.Dequeue();
             //print(hitObject);
             float nextTime = hitObject.ShowTime;
             float delta = nextTime - TimeSinceSongStart - circleLifeTime;

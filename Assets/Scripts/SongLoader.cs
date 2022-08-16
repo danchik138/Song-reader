@@ -6,9 +6,13 @@ using System.IO;
 
 public class SongLoader : MonoBehaviour
 {
-    private string infoFilePath;
-    private string audioFilePath;
     private string songName;
+    private string artist;
+
+    private string folderPath;
+    private string audioFilePath;
+
+    private List<string> songInfoFiles;
 
     public bool IfSongLoaded { get => ifAduioLoaded && ifDataLoaded; }
 
@@ -17,43 +21,143 @@ public class SongLoader : MonoBehaviour
     private bool ifAduioLoaded;
     private bool ifDataLoaded;
 
-    private Queue<HitObject> hits;
+    private List<Difficulty> difficulties;
     private AudioClip audioClip;
 
-    public void Initialize(string absoluteFolderPath, string songName = "Unknown", string mainSongFileName = @"./Song.prosu",
-        string audioFileName = @"./Audio.mp3")
+    public SongLoader()
     {
-        this.songName = songName;
-        infoFilePath = Path.Combine(absoluteFolderPath, mainSongFileName);
-        audioFilePath = Path.Combine(absoluteFolderPath, audioFileName);
+        songInfoFiles = new List<string>();
+    }
+
+    public void Initialize(string folderPath)
+    {
+        this.folderPath = folderPath;
+
+        difficulties = new List<Difficulty>();
+
+        var files = Directory.GetFiles(folderPath);
+
+        SetAudioAndDataPaths(files);
+
         ifAduioLoaded = false;
         ifDataLoaded = false;
-        print($"song loader initialized with:\n\tInfo = {infoFilePath}\n\tAudio = {audioFilePath}");
+        print($"song loader initialized with path:\t{folderPath}");
     }
-    public void StartLoadSong()
-    {
-        StartCoroutine(LoadData());
-        StartCoroutine(LoadAudio());
-        print("Song Load Started");
-    }
-    IEnumerator LoadData()
-    {
-        hits = new Queue<HitObject>();
 
-        using (var file = File.OpenText(infoFilePath))
+    private void SetAudioAndDataPaths(string[] files)
+    {
+        foreach (var file in files)
         {
-            while (file.ReadLine() != "[HitObjects]") ;
-            while (!file.EndOfStream)
+            if (file.Contains(".meta"))
             {
-                string line = file.ReadLine();
-                hits.Enqueue(CreateHitObject(line));
+                continue;
+            }
+            if (file.Contains(".mp3"))
+            {
+                audioFilePath = file;
+            }
+            if (file.Contains(".osu"))
+            {
+                songInfoFiles.Add(file);
             }
         }
+    }
+
+    public void StartLoadSong()
+    {
+        print("Song Load Started");
+        StartCoroutine(LoadData());
+        StartCoroutine(LoadAudio());
+    }
+
+    //IEnumerator LoadData()
+    //{
+    //    hits = new Queue<HitObject>();
+
+    //    using (var file = File.OpenText(infoFilePath))
+    //    {
+    //        while (file.ReadLine() != "[HitObjects]") ;
+    //        while (!file.EndOfStream)
+    //        {
+    //            string line = file.ReadLine();
+    //            hits.Enqueue(CreateHitObject(line));
+    //        }
+    //    }
+    //    yield return 1;
+    //    ifDataLoaded = true;
+    //    print("Song data loaded sucesfull");
+    //}
+
+    IEnumerator LoadData()
+    {
+        foreach (var diffFile in songInfoFiles)
+        {
+            string name;
+            float[] difficultyInfo;
+            Queue<HitObject> hits;
+
+            using (var file = File.OpenText(diffFile))
+            {
+                name = GetDifficultyName(file);
+
+                difficultyInfo = GetDifficultyInfo(file);
+
+                hits = GetHitObjects(file);
+            }
+            print("all got");
+            Difficulty diff = new Difficulty(hits, name, difficultyInfo);
+            print("diff reated");
+            difficulties.Add(diff);
+        }
+
         yield return 1;
         ifDataLoaded = true;
         print("Song data loaded sucesfull");
     }
 
+    private string GetDifficultyName(StreamReader file)
+    {
+        print("loading difficulty");
+        string result = "no name";
+        while (file.ReadLine() != "[Metadata]") ;
+        while (file.Peek() != '[')
+        {
+            string currentString = file.ReadLine();
+            if (currentString.Contains("Version"))
+            {
+                result = currentString.Substring(8);
+                return result;
+            }
+        }
+        return result;
+    }
+
+    private float[] GetDifficultyInfo(StreamReader file)
+    {
+        
+        float[] difficultyInfo = new float[6];
+        while (file.ReadLine() != "[Difficulty]") ;
+        for (int i = 0; i < 6; i++)
+        {
+            string currentLine = file.ReadLine().Replace('.', ',');
+            difficultyInfo[i] = float.Parse(currentLine.Split(':')[1]);
+        }
+        return difficultyInfo;
+    }
+
+    private Queue<HitObject> GetHitObjects(StreamReader file)
+    {
+        Queue<HitObject> hits = new Queue<HitObject>();
+
+        while (file.ReadLine() != "[HitObjects]") ;
+
+        while (!file.EndOfStream)
+        {
+            string line = file.ReadLine();
+            hits.Enqueue(CreateHitObject(line));
+        }
+        return hits;
+    }
     IEnumerator LoadAudio()
     {
         string webPath = @"file://" + audioFilePath;
@@ -91,7 +195,7 @@ public class SongLoader : MonoBehaviour
     {
         if (IfSongLoaded)
         {
-            Song song = new Song(audioClip, hits, songName);
+            Song song = new Song(audioClip, difficulties, songName);
             return song;
         }
         else

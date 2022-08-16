@@ -40,7 +40,8 @@ public class SongManager : MonoBehaviour
     {
         if (loader.IfSongLoaded)
         {
-            spawnManager.StartSong(loader.GetSong());
+            Song song = loader.GetSong();
+            spawnManager.StartSong(song.audio, song.GetDifficulty(0).GetHitsQueue());
             gameObject.active = false;
         }
     }

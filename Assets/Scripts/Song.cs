@@ -4,35 +4,66 @@ using UnityEngine;
 
 public class Song
 {
-    public string Name { get; private set; }
-
-    private Queue<HitObject> hits;
+    public string name { get; private set; }
 
     public AudioClip audio { get; private set; }
 
-    public Song(AudioClip audio, Queue<HitObject> queue, string name = "unknown")
+
+    private List<Difficulty> difficulties;
+
+    
+
+    public Song(AudioClip audio, List<Difficulty> difficulties, string name = "unknown")
     {
         this.audio = audio;
-        hits = queue;
-        Name = name;
+        this.difficulties = difficulties;
+        this.name = name;
     }
- 
-    public HitObject GetHitObjectFromQueue()
+    
+    public bool HasAnyDifficulty()
     {
-        return hits.Dequeue();
-    }
-    public HitObject PeekHitObjectFromQueue()
-    {
-        return hits.Peek();
+        return difficulties.Count > 0;
     }
 
-    public bool IfContainsHitObjects
+
+    public Difficulty GetDifficulty(int difficultyNumber)
     {
-        get { return hits.Count > 0; }
+        return difficulties[difficultyNumber];
+    }
+
+    public DifficultyInfo[] GetDifficultiesNamesAndPositions()
+    {
+        DifficultyInfo[] diffData = new DifficultyInfo[difficulties.Count];
+        for (int i = 0; i < difficulties.Count; i++)
+        {
+            diffData[i] = new DifficultyInfo(difficulties[i].name, difficulties[i].starsCount, i);
+        }
+        return diffData;
+    }
+
+    public struct DifficultyInfo
+    {
+        string name;
+        int number;
+        float starCount;
+
+        public DifficultyInfo(string name, float starRate, int number)
+        {
+            this.name = name;
+            this.number = number;
+            this.starCount = starRate;
+        }
     }
 
     public override string ToString()
     {
-        return string.Format($"{Name}, length = {hits.Count}");
+        string result = $"SongName = {name}\nDifficulties:\n";
+        foreach (Difficulty difficulty in difficulties)
+        {
+            result += difficulty.name + "\n";
+        }
+        result += $"Number of difficulties: {difficulties.Count.ToString()}\n";
+        return result;
     }
 }
+
