@@ -31,29 +31,17 @@ public class Song
         return difficulties[difficultyNumber];
     }
 
-    public DifficultyInfo[] GetDifficultiesNamesAndPositions()
+    public Difficulty.DifficultyInfo[] GetDifficultiesNamesAndPositions()
     {
-        DifficultyInfo[] diffData = new DifficultyInfo[difficulties.Count];
+        var diffData = new Difficulty.DifficultyInfo[difficulties.Count];
         for (int i = 0; i < difficulties.Count; i++)
         {
-            diffData[i] = new DifficultyInfo(difficulties[i].name, difficulties[i].starsCount, i);
+            diffData[i] = difficulties[i].GetDifficultyInfo(i);
         }
         return diffData;
     }
 
-    public struct DifficultyInfo
-    {
-        string name;
-        int number;
-        float starCount;
-
-        public DifficultyInfo(string name, float starRate, int number)
-        {
-            this.name = name;
-            this.number = number;
-            this.starCount = starRate;
-        }
-    }
+    
 
     public override string ToString()
     {

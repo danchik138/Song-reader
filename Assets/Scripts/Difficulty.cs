@@ -48,4 +48,23 @@ public class Difficulty
     {
         get { return hits.Count > 0; }
     }
+
+    public DifficultyInfo GetDifficultyInfo(int difficultyNumber)
+    {
+        return new DifficultyInfo(name, OverallDifficulty, difficultyNumber);
+    }
+
+    public struct DifficultyInfo
+    {
+        string name;
+        int number;
+        float starCount;
+
+        public DifficultyInfo(string name, float starRate, int number)
+        {
+            this.name = name;
+            this.number = number;
+            this.starCount = starRate;
+        }
+    }
 }

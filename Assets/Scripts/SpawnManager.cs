@@ -27,19 +27,20 @@ public class SpawnManager : MonoBehaviour
         StartCoroutine(SpawnCircles(hitsQueue));
     }
 
-    IEnumerator SpawnCircles(Queue<HitObject> song)
+    IEnumerator SpawnCircles(Queue<HitObject> hits)
     {
-        while (song.Count > 0)
+        while (hits.Count > 0)
         {
-            HitObject hitObject = song.Dequeue();
-            //print(hitObject);
-            float nextTime = hitObject.ShowTime;
-            float delta = nextTime - TimeSinceSongStart - circleLifeTime;
-            print($"new circle in {delta} seconds");
-            yield return new WaitForSecondsRealtime(delta);
-            float x = (hitObject.XPosition + xOffset) * scale;
-            float y = (hitObject.YPosition + yOffset) * scale;
-            Instantiate(circle, new Vector3(x, y, 0), new Quaternion());
+            HitObject hitObject = hits.Dequeue();
+            print(hitObject);
+            yield return 1;
+            //float nextTime = hitObject.ShowTime;
+            //float delta = nextTime - TimeSinceSongStart - circleLifeTime;
+            //print($"new circle in {delta} seconds");
+            //yield return new WaitForSecondsRealtime(delta);
+            //float x = (hitObject.XPosition + xOffset) * scale;
+            //float y = (hitObject.YPosition + yOffset) * scale;
+            //Instantiate(circle, new Vector3(x, y, 0), new Quaternion());
         }
     }
 }

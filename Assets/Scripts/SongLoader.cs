@@ -13,7 +13,6 @@ public class SongLoader : MonoBehaviour
     private string audioFilePath;
 
     private List<string> songInfoFiles;
-
     public bool IfSongLoaded { get => ifAduioLoaded && ifDataLoaded; }
 
     public Song ResultSong { get; private set; }
@@ -70,24 +69,6 @@ public class SongLoader : MonoBehaviour
         StartCoroutine(LoadAudio());
     }
 
-    //IEnumerator LoadData()
-    //{
-    //    hits = new Queue<HitObject>();
-
-    //    using (var file = File.OpenText(infoFilePath))
-    //    {
-    //        while (file.ReadLine() != "[HitObjects]") ;
-    //        while (!file.EndOfStream)
-    //        {
-    //            string line = file.ReadLine();
-    //            hits.Enqueue(CreateHitObject(line));
-    //        }
-    //    }
-    //    yield return 1;
-    //    ifDataLoaded = true;
-    //    print("Song data loaded sucesfull");
-    //}
-
     IEnumerator LoadData()
     {
         foreach (var diffFile in songInfoFiles)
@@ -99,14 +80,13 @@ public class SongLoader : MonoBehaviour
             using (var file = File.OpenText(diffFile))
             {
                 name = GetDifficultyName(file);
-
+                print($"working on {name} diff");
                 difficultyInfo = GetDifficultyInfo(file);
 
-                hits = GetHitObjects(file);
+                hits = GetHitObjects(file, DifficultyInterpretation.ApproachRateToNumber(difficultyInfo[3]));
             }
-            print("all got");
+            print("diff got");
             Difficulty diff = new Difficulty(hits, name, difficultyInfo);
-            print("diff reated");
             difficulties.Add(diff);
         }
 
@@ -145,7 +125,7 @@ public class SongLoader : MonoBehaviour
         return difficultyInfo;
     }
 
-    private Queue<HitObject> GetHitObjects(StreamReader file)
+    private Queue<HitObject> GetHitObjects(StreamReader file, float lifeTime)
     {
         Queue<HitObject> hits = new Queue<HitObject>();
 
@@ -154,14 +134,79 @@ public class SongLoader : MonoBehaviour
         while (!file.EndOfStream)
         {
             string line = file.ReadLine();
-            hits.Enqueue(CreateHitObject(line));
+            hits.Enqueue(CreateHitObject(line, lifeTime));
         }
         return hits;
     }
-    IEnumerator LoadAudio()
+
+    private HitObject CreateHitObject(string line, float lifeTime)
+    {
+        //print("creating hit object");
+        if (line.Contains('|'))
+        {
+            return CreateSlider(line, lifeTime);
+        }
+        else if (CountChars(line, ',') == 5)
+        {
+            return CreateSimpleHit(line, lifeTime);
+        }
+        else
+        {
+            return CreateSpinner(line, lifeTime);
+        }
+    }
+
+    private HitObject CreateSimpleHit(string line, float lifeTime)
+    {
+        string[] data = line.Split(',');
+        float x = float.Parse(data[0]);
+        float y = float.Parse(data[1]);
+        float time = float.Parse(data[2]) / 1000;
+        HitObject hitObject = new HitCircle(x, y, lifeTime, time);
+        return hitObject;
+    }
+
+    private HitObject CreateSlider(string line, float lifeTime)
+    {
+        string[] data = line.Split('|');
+        int lastSectorNumber = 1;
+        for (; lastSectorNumber < data.Length; lastSectorNumber++)
+            if (CountChars(data[lastSectorNumber], ',') != 0)
+                break;
+        string[] firstSector = data[0].Split(',');
+        string[] lastSector = data[lastSectorNumber].Split(',');
+        int usefulSectorCount = lastSectorNumber + 1;
+
+        float[,] hits = new float[usefulSectorCount, 2];
+        float startTime = float.Parse(firstSector[2]) / 1000.0f;
+        float sliderRepeatCount = float.Parse(lastSector[1]);
+        data[0] = firstSector[0] + ':' + firstSector[1];
+        data[lastSectorNumber] = lastSector[0];
+
+        for (int i = 0; i < usefulSectorCount; i++)
+        {
+            string[] strCoordinates = data[i].Split(':');
+            hits[i, 0] = float.Parse(strCoordinates[0]);
+            hits[i, 1] = float.Parse(strCoordinates[1]);
+        }
+
+        return new Slider(lifeTime, startTime, sliderRepeatCount, Slider.SliderType.B, hits);
+    }
+
+    private HitObject CreateSpinner(string line, float lifeTime)
+    {
+        string[] data = line.Split(',');
+        float x = float.Parse(data[0]);
+        float y = float.Parse(data[1]);
+        float startTime = float.Parse(data[2]) / 1000.0f;
+        float endTime = float.Parse(data[5]) / 1000.0f;
+        return new Spinner(x, y, lifeTime, startTime, endTime);
+    }
+
+    private IEnumerator LoadAudio()
     {
         string webPath = @"file://" + audioFilePath;
-        print($"Loading audio from {webPath}");
+        //print($"Loading audio from {webPath}");
         using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(webPath, AudioType.MPEG))
         {
             yield return www.SendWebRequest();
@@ -173,22 +218,10 @@ public class SongLoader : MonoBehaviour
             else
             {
                 audioClip = DownloadHandlerAudioClip.GetContent(www);
-                print("Song audio loaded sucesfull");
+                //print("Song audio loaded sucesfull");
                 ifAduioLoaded = true;
             }
         }
-    }
-
-
-    HitObject CreateHitObject(string line)
-    {
-        string[] data = line.Split(',');
-        float x = float.Parse(data[0]);
-        float y = float.Parse(data[1]);
-        float time = float.Parse(data[2]) / 1000;
-        HitObject hitObject = new HitObject(x, y, time);
-        //print(hitObject);
-        return hitObject;
     }
 
     public Song GetSong()
@@ -202,5 +235,20 @@ public class SongLoader : MonoBehaviour
         {
             throw new System.Exception("Song isn't loaded yet");
         }
+    }
+
+    private int CountChars(string line, char symbol)
+    {
+        int count = 0;
+
+        foreach (var letter in line)
+        {
+            if (letter == symbol)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 }
